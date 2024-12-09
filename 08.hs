@@ -22,15 +22,18 @@ shootInt (x1, y1) (x2, y2) =
  where
   div3 a = a `rem` 3 == 0
 
--- Finds the next n'th point on the a-b line with integer coordinates, starting
--- from the first given point.
-shootStep :: Point -> Point -> Int -> Point
-shootStep (x1, y1) (x2, y2) n =
-  let d = (x2 - x1) `gcd` (y2 - y1)
-      xd = (x2 - x1) `div` d
-      yd = (y2 - y1) `div` d
-   in (x1 + n * xd, y1 + n * yd)
+-- Finds the next points on the a-b line with integer coordinates, starting
+-- from the first given point in the given direction (+1 or -1).
+shootSteps :: Point -> Point -> Int -> [Point]
+shootSteps (x1, y1) (x2, y2) direction = shootStep . (direction *) <$> [0 ..]
+ where
+  shootStep n =
+    let d = (x2 - x1) `gcd` (y2 - y1)
+        xd = (x2 - x1) `div` d
+        yd = (y2 - y1) `div` d
+     in (x1 + n * xd, y1 + n * yd)
 
+-- as it says
 inside :: Board -> Point -> Bool
 inside board (x, y) = x >= 0 && x < boundX && y >= 0 && y < boundY
  where
@@ -64,8 +67,8 @@ shootsOfType' board t = concat $ genFromPairs board t genFromPair
  where
   genFromPair a b =
     -- advances forward and backward until it gets out of the board
-    let advance ts = takeWhile (inside board) $ map (shootStep a b) ts
-     in advance [0 ..] ++ advance [-1, -2 ..]
+    let shootStepsInBoard = takeWhile (inside board) . shootSteps a b
+     in shootStepsInBoard 1 ++ shootStepsInBoard (-1)
 
 -- Use shootsOfTypes or hootsOfType' for the first and second part of the problem, respectively.
 solveTask :: Board -> Int

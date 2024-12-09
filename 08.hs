@@ -1,4 +1,3 @@
-import Control.Monad (guard)
 import Data.List (findIndices)
 import Data.List.Split (splitOn)
 import Data.Maybe (catMaybes)
@@ -33,7 +32,7 @@ shootSteps (x1, y1) (x2, y2) direction = shootStep . (direction *) <$> [0 ..]
         yd = (y2 - y1) `div` d
      in (x1 + n * xd, y1 + n * yd)
 
--- as it says
+-- Does as it says
 inside :: Board -> Point -> Bool
 inside board (x, y) = x >= 0 && x < boundX && y >= 0 && y < boundY
  where
@@ -52,8 +51,8 @@ genFromPairs board t f = [f a b | a <- antennas, b <- antennas, a /= b]
 
 -- Solves the first part of the problem.
 -- Returns all antinodes of the given antena type t.
-shootsOfType :: Board -> Char -> [Point]
-shootsOfType board t = internalShots ++ externalShots
+antinodes1 :: Board -> Char -> [Point]
+antinodes1 board t = internalShots ++ externalShots
  where
   internalShots = catMaybes $ genFromPairs board t shootInt
   externalShots = inside board `filter` genFromPairs board t shootExt
@@ -62,8 +61,8 @@ shootsOfType board t = internalShots ++ externalShots
 -- Returns all antinodes of the given antena type t.
 -- I know I do it twice and that unnecessary (genFromPairs gives us each point
 -- pair twice - (a,b) and (b,a)), but that's the easiest.
-shootsOfType' :: Board -> Char -> [Point]
-shootsOfType' board t = concat $ genFromPairs board t genFromPair
+antinodes2 :: Board -> Char -> [Point]
+antinodes2 board t = concat $ genFromPairs board t genFromPair
  where
   genFromPair a b =
     -- advances forward and backward until it gets out of the board
@@ -71,15 +70,21 @@ shootsOfType' board t = concat $ genFromPairs board t genFromPair
      in shootStepsInBoard 1 ++ shootStepsInBoard (-1)
 
 -- Use shootsOfTypes or hootsOfType' for the first and second part of the problem, respectively.
-solveTask :: Board -> Int
-solveTask board = size . unions $ fromList . shootsOfType' board <$> antennaTypes
+solveTask :: (Board -> Char -> [Point]) -> Board -> Int
+solveTask antinodeProducer board = size . unions $ fromList . antinodeProducer board <$> antennaTypes
  where
   antennaTypes = ['0' .. '9'] ++ ['a' .. 'z'] ++ ['A' .. 'Z']
 
-unTail :: [a] -> [a]
-unTail [a] = []
-unTail [] = error "unTail on empty list"
-unTail (a : as) = a : unTail as
-
 main :: IO ()
-main = solveTask . unTail <$> splitOn "\n" <$> readFile "08.in" >>= print
+main = do
+  board <- withoutLast . splitOn "\n" <$> readFile "08.in"
+  putStr "Part 1: "
+  print $ solveTask antinodes1 board
+  putStr "Part 2: "
+  print $ solveTask antinodes2 board
+ where
+  -- For some reason the 'splitOn' function returns an empty line at the end of
+  -- the file that shouldn't be there, so we have to remove it.
+  withoutLast [] = error "withoutLast on empty list"
+  withoutLast [_] = []
+  withoutLast (a : as) = a : withoutLast as
